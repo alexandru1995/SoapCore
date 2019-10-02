@@ -148,8 +148,11 @@ namespace SoapCore
 				var toBuild = _complexTypeToBuild.Dequeue();
 
 				var toBuildName = toBuild.IsArray ? "ArrayOf" + toBuild.Name.Replace("[]", string.Empty)
-					: typeof(IEnumerable).IsAssignableFrom(toBuild) ? "ArrayOf" + GetGenericType(toBuild).Name
-					: toBuild.Name;
+					: typeof(IEnumerable).IsAssignableFrom(toBuild) ? ((GetGenericType(toBuild).Name == typeof(KeyValuePair<,>).Name) ?
+						$@"ArrayOfKeyValuePairOf{GetGenericType(toBuild).GenericTypeArguments[0].Name}{GetGenericType(toBuild).GenericTypeArguments[1].Name}"
+						: GetGenericType(toBuild).Name)
+					: (toBuild.Name == typeof(KeyValuePair<,>).Name) ? $@"KeyValuePairOf{toBuild.GenericTypeArguments[0].Name}{toBuild.GenericTypeArguments[1].Name}"
+						: toBuild.Name;
 
 				if (!_builtComplexTypes.Contains(toBuildName))
 				{
@@ -160,6 +163,12 @@ namespace SoapCore
 					}
 					else if (typeof(IEnumerable).IsAssignableFrom(toBuild))
 					{
+						writer.WriteAttributeString("name", toBuildName);
+					}
+					else if (toBuildName == typeof(KeyValuePair<,>).Name)
+					{
+						toBuildName =
+							$@"KeyValuePairOf{toBuild.GenericTypeArguments[0].Name}{toBuild.GenericTypeArguments[1].Name}";
 						writer.WriteAttributeString("name", toBuildName);
 					}
 					else
@@ -438,6 +447,11 @@ namespace SoapCore
 					xsTypename = "tns:" + type.Name;
 					_enumToBuild.Enqueue(type);
 				}
+				else if (typeInfo.Name == typeof(KeyValuePair<,>).Name)
+				{
+					xsTypename = "tns:" + $@"KeyValuePairOf{type.GenericTypeArguments[0].Name}{type.GenericTypeArguments[1].Name}";
+					_complexTypeToBuild.Enqueue(type);
+				}
 				else
 				{
 					var underlyingType = Nullable.GetUnderlyingType(type);
@@ -517,6 +531,11 @@ namespace SoapCore
 					writer.WriteAttributeString("name", name);
 					writer.WriteAttributeString("type", "xs:base64Binary");
 				}
+				else if (type.Name == "Object")
+				{
+					writer.WriteAttributeString("name", name);
+					writer.WriteAttributeString("type", "xs:anyType");
+				}
 				else if (type.IsArray)
 				{
 					if (string.IsNullOrEmpty(name))
@@ -562,7 +581,11 @@ namespace SoapCore
 							writer.WriteAttributeString("nillable", "true");
 						}
 
-						writer.WriteAttributeString("type", "tns:ArrayOf" + GetGenericType(type).Name);
+						var typeName = "tns:ArrayOf" + ((GetGenericType(type).Name == typeof(KeyValuePair<,>).Name) ?
+							("KeyValuePairOf" + GetGenericType(type).GenericTypeArguments[0].Name + GetGenericType(type).GenericTypeArguments[1].Name)
+							: GetGenericType(type).Name);
+
+						writer.WriteAttributeString("type", typeName);
 
 						_complexTypeToBuild.Enqueue(type);
 					}
@@ -638,6 +661,9 @@ namespace SoapCore
 					break;
 				case "TimeSpan":
 					resolvedType = "xs:duration";
+					break;
+				case "Object":
+					resolvedType = "xs:anyType";
 					break;
 			}
 

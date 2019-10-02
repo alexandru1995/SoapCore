@@ -1,27 +1,31 @@
-﻿using System.ServiceModel;
+﻿using System.Collections.Generic;
+using System.ServiceModel;
 using System.Threading.Tasks;
 
 namespace Models
 {
-	[ServiceContract]
-	public interface ISampleService
-	{
-		[OperationContract]
-		string Ping(string s);
+    [ServiceContract]
+    public interface ISampleService
+    {
+        [OperationContract]
+        string Ping(string s);
 
-		[OperationContract]
-		ComplexModelResponse PingComplexModel(ComplexModelInput inputModel);
+        [OperationContract]
+        ComplexModelResponse PingComplexModel(ComplexModelInput inputModel);
 
-		[OperationContract]
-		void VoidMethod(out string s);
+        [OperationContract]
+        List<KeyValuePair<string, object>> VoidMethod();
 
-		[OperationContract]
-		Task<int> AsyncMethod();
+        [OperationContract]
+        object Test();
 
-		[OperationContract]
-		int? NullableMethod(bool? arg);
+        [OperationContract]
+        Task<int> AsyncMethod();
 
-		[OperationContract]
-		void XmlMethod(System.Xml.Linq.XElement xml);
-	}
+        [OperationContract]
+        KeyValuePair<int, object> NullableMethod(bool? arg);
+
+        [OperationContract]
+        object XmlMethod();
+    }
 }

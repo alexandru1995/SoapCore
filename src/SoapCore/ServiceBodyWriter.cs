@@ -1,4 +1,6 @@
 using System;
+using System.Collections;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -9,6 +11,7 @@ using System.ServiceModel;
 using System.ServiceModel.Channels;
 using System.Xml;
 using System.Xml.Serialization;
+using SoapCore.TestKeyValue;
 
 namespace SoapCore
 {
@@ -182,11 +185,33 @@ namespace SoapCore
 					}
 					else
 					{
-						var serializer = CachedXmlSerializer.GetXmlSerializer(resultType, xmlName, xmlNs);
-
-						lock (serializer)
+						if (resultType.Name == typeof(System.Collections.Generic.KeyValuePair<,>).Name)
 						{
-							serializer.Serialize(writer, _result);
+							var key = resultType.GetProperty("Key");
+							var value = resultType.GetProperty("Value");
+							var keyObj = (key != null) ? key.GetValue(_result) : string.Empty;
+							var valueObj = (value != null) ? value.GetValue(_result) : string.Empty;
+							var keyValue = new TestKeyValue.KeyValuePair<object, object>(keyObj, valueObj);
+							var serializer = CachedXmlSerializer.GetXmlSerializer(typeof(TestKeyValue.KeyValuePair<object, object>), xmlName, xmlNs);
+							lock (serializer)
+							{
+								serializer.Serialize(writer, keyValue);
+							}
+						}
+						else
+						{
+							if (resultType.IsGenericType && resultType.GenericTypeArguments[0].Name == typeof(System.Collections.Generic.KeyValuePair<,>).Name)
+							{
+								writer.Serialize(_result, xmlName, xmlNs);
+							}
+							else
+							{
+								var serializer = CachedXmlSerializer.GetXmlSerializer(resultType, xmlName, xmlNs);
+								lock (serializer)
+								{
+									serializer.Serialize(writer, _result);
+								}
+							}
 						}
 					}
 				}
